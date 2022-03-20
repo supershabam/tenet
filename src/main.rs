@@ -40,7 +40,6 @@ fn find_mirrors_with(
         let state = mirror_state(&mirror);
         match state {
             MirrorState::Complete => {
-                println!("found mirror={:?}", &mirror);
                 result.insert(mirror);
             }
             MirrorState::Invalid => {}
@@ -109,7 +108,10 @@ fn main() -> Result<()> {
     let dict = make_dict(&path)?;
     let mirrors = find_mirrors(&dict, length);
     for mirror in mirrors {
-        for word in mirror {
+        for (idx, word) in mirror.iter().enumerate() {
+            if idx != 0 {
+                print!(" ");
+            }
             print!("{}", word);
         }
         println!("");
