@@ -1,4 +1,3 @@
-0 target/debug/make_levidromes
 a
 aa
 aaa
