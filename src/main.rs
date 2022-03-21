@@ -21,7 +21,7 @@ fn make_dict<P: AsRef<Path>>(path: P) -> Result<BTreeSet<String>> {
 
 fn find_mirrors(dict: &BTreeSet<String>, length: usize) -> BTreeSet<Vec<String>> {
     let mut results = BTreeSet::new();
-    find_mirrors_with(dict, length,  &Vec::new(), &mut results);
+    find_mirrors_with(dict, length, &Vec::new(), &mut results);
     results
 }
 
@@ -67,6 +67,19 @@ fn mirror_state(mirror: &Vec<String>) -> MirrorState {
     let len = mirror[0].len();
     if mirror.last().unwrap().len() != len {
         return MirrorState::Invalid;
+    }
+    // check that words are levidromes of their counter once selected
+    for i in 0..(len / 2) {
+        let j = len - 1 - i;
+        match (mirror.get(i), mirror.get(j)) {
+            (Some(iword), Some(jword)) => {
+                let revj: String = jword.chars().rev().collect();
+                if *iword != revj {
+                    return MirrorState::Invalid;
+                }
+            }
+            _ => {}
+        }
     }
     for i in 0..len {
         for j in 0..len {
@@ -144,6 +157,18 @@ mod test {
         assert_eq!(MirrorState::Partial, mirror_state(&mirror));
 
         let mirror: Vec<String> = vec!["sator", "arepo", "tenet", "opera", "rotbs"]
+            .iter()
+            .map(|&s| s.to_string())
+            .collect();
+        assert_eq!(MirrorState::Invalid, mirror_state(&mirror));
+
+        let mirror: Vec<String> = vec!["acara", "cares", "aroma", "reman", "asana"]
+            .iter()
+            .map(|&s| s.to_string())
+            .collect();
+        assert_eq!(MirrorState::Invalid, mirror_state(&mirror));
+
+        let mirror: Vec<String> = vec!["laet", "amir", "eire", "tres"]
             .iter()
             .map(|&s| s.to_string())
             .collect();
