@@ -6,33 +6,42 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
 
-fn make_dict<P: AsRef<Path>>(path: P) -> Result<BTreeSet<String>> {
+mod phoneme;
+
+use phoneme::{Phoneme, Word};
+
+fn make_dict<P: AsRef<Path>>(path: P) -> Result<BTreeSet<Word>> {
     let mut dict = BTreeSet::new();
     let file = fs::File::open(&path)
         .with_context(|| format!("while opening path={}", path.as_ref().to_string_lossy()))?;
     let reader = BufReader::new(file);
     for line in reader.lines() {
-        if let Ok(word) = line {
+        if let Ok(spelling) = line {
+            let word = Word{
+                spelling: spelling.clone(),
+                phonemes: spelling.clone().chars().map(|c| {Phoneme{symbol: String::from(c)}}).collect(),
+            };
+
             dict.insert(word);
         }
     }
     Ok(dict)
 }
 
-fn find_mirrors(dict: &BTreeSet<String>, length: usize) -> BTreeSet<Vec<String>> {
+fn find_mirrors(dict: &BTreeSet<Word>, length: usize) -> BTreeSet<Vec<Word>> {
     let mut results = BTreeSet::new();
     find_mirrors_with(dict, length, &Vec::new(), &mut results);
     results
 }
 
 fn find_mirrors_with(
-    dict: &BTreeSet<String>,
+    dict: &BTreeSet<Word>,
     length: usize,
-    history: &Vec<String>,
-    result: &mut BTreeSet<Vec<String>>,
+    history: &Vec<Word>,
+    result: &mut BTreeSet<Vec<Word>>,
 ) {
     for word in dict {
-        if word.len() != length {
+        if word.phonemes.len() != length {
             continue;
         }
         let mut mirror = history.clone();
@@ -60,12 +69,12 @@ p o w
 o
 w
 */
-fn mirror_state(mirror: &Vec<String>) -> MirrorState {
+fn mirror_state(mirror: &Vec<Word>) -> MirrorState {
     if mirror.len() == 0 {
         return MirrorState::Partial;
     }
-    let len = mirror[0].len();
-    if mirror.last().unwrap().len() != len {
+    let len = mirror[0].phonemes.len();
+    if mirror.last().unwrap().phonemes.len() != len {
         return MirrorState::Invalid;
     }
     // check that words are levidromes of their counter once selected
@@ -73,8 +82,8 @@ fn mirror_state(mirror: &Vec<String>) -> MirrorState {
         let j = len - 1 - i;
         match (mirror.get(i), mirror.get(j)) {
             (Some(iword), Some(jword)) => {
-                let revj: String = jword.chars().rev().collect();
-                if *iword != revj {
+                let revj: Vec<Phoneme> = jword.phonemes.iter().cloned().rev().collect();
+                if *iword.phonemes != revj {
                     return MirrorState::Invalid;
                 }
             }
@@ -90,8 +99,8 @@ fn mirror_state(mirror: &Vec<String>) -> MirrorState {
             let jword = mirror.get(j);
             match (iword, jword) {
                 (Some(iword), Some(jword)) => {
-                    let ij = iword.chars().nth(j).unwrap();
-                    let ji = jword.chars().nth(i).unwrap();
+                    let ij = iword.phonemes.iter().nth(j).unwrap();
+                    let ji = jword.phonemes.iter().nth(i).unwrap();
                     if ij != ji {
                         return MirrorState::Invalid;
                     }
@@ -125,7 +134,7 @@ fn main() -> Result<()> {
             if idx != 0 {
                 print!(" ");
             }
-            print!("{}", word);
+            print!("{:?}", word);
         }
         println!("");
     }
@@ -134,43 +143,50 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use crate::{mirror_state, MirrorState};
+    use crate::{mirror_state, MirrorState, phoneme::{Word, Phoneme}};
 
     #[test]
     fn test_mirror_state() {
-        let mirror: Vec<String> = vec!["sator"].iter().map(|&s| s.to_string()).collect();
+        fn to_word(s: &str) -> Word {
+            Word{
+                spelling: String::from(s),
+                phonemes: s.chars().map(|c| { Phoneme{symbol: String::from(c)}}).collect(),
+            }
+        }
+
+        let mirror: Vec<Word> = vec!["sator"].iter().map(|&s| to_word(s)).collect();
         assert_eq!(MirrorState::Partial, mirror_state(&mirror));
 
-        let mirror: Vec<String> = vec!["cow", "win"].iter().map(|&s| s.to_string()).collect();
+        let mirror: Vec<Word> = vec!["cow", "win"].iter().map(|&s| to_word(s)).collect();
         assert_eq!(MirrorState::Invalid, mirror_state(&mirror));
 
-        let mirror: Vec<String> = vec!["sator", "arepo", "tenet", "opera", "rotas"]
+        let mirror: Vec<Word> = vec!["sator", "arepo", "tenet", "opera", "rotas"]
             .iter()
-            .map(|&s| s.to_string())
+            .map(|&s| to_word(s))
             .collect();
         assert_eq!(MirrorState::Complete, mirror_state(&mirror));
 
-        let mirror: Vec<String> = vec!["sator", "arepo", "tenet", "opera"]
+        let mirror: Vec<Word> = vec!["sator", "arepo", "tenet", "opera"]
             .iter()
-            .map(|&s| s.to_string())
+            .map(|&s| to_word(s))
             .collect();
         assert_eq!(MirrorState::Partial, mirror_state(&mirror));
 
-        let mirror: Vec<String> = vec!["sator", "arepo", "tenet", "opera", "rotbs"]
+        let mirror: Vec<Word> = vec!["sator", "arepo", "tenet", "opera", "rotbs"]
             .iter()
-            .map(|&s| s.to_string())
+            .map(|&s| to_word(s))
             .collect();
         assert_eq!(MirrorState::Invalid, mirror_state(&mirror));
 
-        let mirror: Vec<String> = vec!["acara", "cares", "aroma", "reman", "asana"]
+        let mirror: Vec<Word> = vec!["acara", "cares", "aroma", "reman", "asana"]
             .iter()
-            .map(|&s| s.to_string())
+            .map(|&s| to_word(s))
             .collect();
         assert_eq!(MirrorState::Invalid, mirror_state(&mirror));
 
-        let mirror: Vec<String> = vec!["laet", "amir", "eire", "tres"]
+        let mirror: Vec<Word> = vec!["laet", "amir", "eire", "tres"]
             .iter()
-            .map(|&s| s.to_string())
+            .map(|&s| to_word(s))
             .collect();
         assert_eq!(MirrorState::Invalid, mirror_state(&mirror));
     }

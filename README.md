@@ -15,3 +15,4 @@ This would give a set of mouth pronuciations that fit a cool pattern.
 
 https://ssb22.user.srcf.net/gradint/lexconvert.html  
 https://github.com/cmusphinx/cmudict  
+https://raw.githubusercontent.com/cmusphinx/cmudict/master/cmudict.dict  
