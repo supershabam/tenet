@@ -21,9 +21,14 @@ fn make_dict<P: AsRef<Path>>(path: P) -> Result<BTreeSet<Word>> {
             if parts.len() < 2 {
                 continue;
             }
-            let word = Word{
+            let word = Word {
                 spelling: String::from(parts[0]),
-                phonemes: parts[1..].iter().map(|&str| {Phoneme{symbol: String::from(str)}}).collect(),
+                phonemes: parts[1..]
+                    .iter()
+                    .map(|&str| Phoneme {
+                        symbol: String::from(str),
+                    })
+                    .collect(),
             };
             // TODO handle homonyms
             if !dict.insert(word) {
@@ -35,13 +40,16 @@ fn make_dict<P: AsRef<Path>>(path: P) -> Result<BTreeSet<Word>> {
 }
 
 fn make_levistrome(dict: &BTreeSet<Word>) -> BTreeSet<Word> {
-    dict.iter().cloned().filter(|w| {
-        if w.phonemes.len() <= 1 {
-            return false;
-        }
-        let rev = w.levidrome();
-        dict.contains(&rev)
-    }).collect()
+    dict.iter()
+        .cloned()
+        .filter(|w| {
+            if w.phonemes.len() <= 1 {
+                return false;
+            }
+            let rev = w.levidrome();
+            dict.contains(&rev)
+        })
+        .collect()
 }
 
 fn find_mirrors(dict: &BTreeSet<Word>, length: usize) -> BTreeSet<Vec<Word>> {
@@ -136,7 +144,6 @@ fn main() -> Result<()> {
     let mut path = String::from("./cmudict.dict");
     let mut length = 5;
     for (idx, argument) in env::args().enumerate() {
-        println!("{} {}", idx, argument);
         match idx {
             1 => path = argument,
             2 => length = argument.parse::<usize>()?,
@@ -151,7 +158,15 @@ fn main() -> Result<()> {
             if idx != 0 {
                 print!(" ");
             }
-            print!("{:?}", word);
+            let phonemes = word
+                .phonemes
+                .iter()
+                .fold(String::from(""), |mut acc, t| {
+                    acc.push_str(&t.symbol);
+                    acc.push_str(" ");
+                    acc
+                });
+            print!("{} ({})", word.spelling, phonemes);
         }
         println!("");
     }
@@ -160,14 +175,23 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use crate::{mirror_state, MirrorState, phoneme::{Word, Phoneme}};
+    use crate::{
+        mirror_state,
+        phoneme::{Phoneme, Word},
+        MirrorState,
+    };
 
     #[test]
     fn test_mirror_state() {
         fn to_word(s: &str) -> Word {
-            Word{
+            Word {
                 spelling: String::from(s),
-                phonemes: s.chars().map(|c| { Phoneme{symbol: String::from(c)}}).collect(),
+                phonemes: s
+                    .chars()
+                    .map(|c| Phoneme {
+                        symbol: String::from(c),
+                    })
+                    .collect(),
             }
         }
 
