@@ -10,3 +10,8 @@ https://github.com/dwyl/english-words
 
 Instead of filling the grid with words, fill the grid with phonemes.
 This would give a set of mouth pronuciations that fit a cool pattern.
+
+### phoneme tenets
+
+https://ssb22.user.srcf.net/gradint/lexconvert.html  
+https://github.com/cmusphinx/cmudict  

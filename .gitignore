@@ -14,3 +14,4 @@ Cargo.lock
 
 /target
 words.txt
+cmudict.dict
