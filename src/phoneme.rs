@@ -11,6 +11,15 @@ pub struct Word {
   pub phonemes: Vec<Phoneme>,
 }
 
+impl Word {
+  pub fn levidrome(&self) -> Self {
+    Word{
+      spelling: self.spelling.clone(),
+      phonemes: self.phonemes.iter().cloned().rev().collect(),
+    }
+  }
+}
+
 impl Ord for Word {
   fn cmp(&self, other: &Self) -> Ordering {
     self.partial_cmp(other).unwrap()

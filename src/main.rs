@@ -16,16 +16,32 @@ fn make_dict<P: AsRef<Path>>(path: P) -> Result<BTreeSet<Word>> {
         .with_context(|| format!("while opening path={}", path.as_ref().to_string_lossy()))?;
     let reader = BufReader::new(file);
     for line in reader.lines() {
-        if let Ok(spelling) = line {
+        if let Ok(line) = line {
+            let parts: Vec<&str> = line.split(" ").collect();
+            if parts.len() < 2 {
+                continue;
+            }
             let word = Word{
-                spelling: spelling.clone(),
-                phonemes: spelling.clone().chars().map(|c| {Phoneme{symbol: String::from(c)}}).collect(),
+                spelling: String::from(parts[0]),
+                phonemes: parts[1..].iter().map(|&str| {Phoneme{symbol: String::from(str)}}).collect(),
             };
-
-            dict.insert(word);
+            // TODO handle homonyms
+            if !dict.insert(word) {
+                // println!("homonym for line={}", line);
+            }
         }
     }
     Ok(dict)
+}
+
+fn make_levistrome(dict: &BTreeSet<Word>) -> BTreeSet<Word> {
+    dict.iter().cloned().filter(|w| {
+        if w.phonemes.len() <= 1 {
+            return false;
+        }
+        let rev = w.levidrome();
+        dict.contains(&rev)
+    }).collect()
 }
 
 fn find_mirrors(dict: &BTreeSet<Word>, length: usize) -> BTreeSet<Vec<Word>> {
@@ -117,7 +133,7 @@ fn mirror_state(mirror: &Vec<Word>) -> MirrorState {
 }
 
 fn main() -> Result<()> {
-    let mut path = String::from("./levidromes.txt");
+    let mut path = String::from("./cmudict.dict");
     let mut length = 5;
     for (idx, argument) in env::args().enumerate() {
         println!("{} {}", idx, argument);
@@ -128,6 +144,7 @@ fn main() -> Result<()> {
         };
     }
     let dict = make_dict(&path)?;
+    let dict = make_levistrome(&dict);
     let mirrors = find_mirrors(&dict, length);
     for mirror in mirrors {
         for (idx, word) in mirror.iter().enumerate() {
